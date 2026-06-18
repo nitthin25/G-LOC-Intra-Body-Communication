@@ -188,6 +188,8 @@ Pump Control + Buzzer Alert
 | 171 mg/dL | 342051 Hz | 342051 Hz | Pump OFF |
 | 192 mg/dL | 388800 Hz | 388800 Hz | Pump ON |
 
+<img width="497" height="260" alt="Image" src="https://github.com/user-attachments/assets/d354466a-f0b1-4e7a-88c2-62f7844b86e4" />
+
 ---
 
 ## 🏥 Applications
