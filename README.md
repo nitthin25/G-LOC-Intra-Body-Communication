@@ -18,6 +18,7 @@ The project simulates glucose levels using a potentiometer, encodes the data int
 - Develop an automated decision-making system for pump actuation.
 - Evaluate the feasibility of Body Area Networks (BANs) for future healthcare applications.
 
+<img width="456" height="338" alt="Image" src="https://github.com/user-attachments/assets/33d2fc36-3fa9-4bb1-b0e5-2f3be532eb93" />
 ---
 
 ## 🚀 Key Features
