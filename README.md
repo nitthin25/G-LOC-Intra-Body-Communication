@@ -92,6 +92,9 @@ Pump Control + Buzzer Alert
 - Stainless Steel Electrodes
 - Breadboard and Jumper Wires
 
+<img width="647" height="526" alt="Image" src="https://github.com/user-attachments/assets/fa0046c9-9f6a-429e-a84f-1fab7fb693c9" />
+
+
 ### Receiver Side
 
 - ESP32 Development Board
@@ -106,6 +109,7 @@ Pump Control + Buzzer Alert
 - 4×AA Battery Pack
 - Breadboard and Jumper Wires
 
+<img width="794" height="581" alt="Image" src="https://github.com/user-attachments/assets/8f2c1c9b-e0d3-44cb-a464-2ef29ae0b112" />
 ---
 
 ## 🔌 Pin Configuration
