@@ -1,1 +1,27 @@
+const int potPin = 4;
+const int signalOutPin = 18;
 
+void setup() {
+  Serial.begin(115200);
+
+  ledcAttach(signalOutPin, 100000, 4);
+  ledcWrite(signalOutPin, 8);
+
+  Serial.println("Transmitter Ready...");
+}
+
+void loop() {
+  int potValue = analogRead(potPin);
+
+  long targetFreq = map(potValue, 0, 4095, 100000, 500000);
+
+  ledcChangeFrequency(signalOutPin, targetFreq, 4);
+
+  Serial.print("ADC: ");
+  Serial.print(potValue);
+  Serial.print(" | Freq: ");
+  Serial.print(targetFreq);
+  Serial.println(" Hz");
+
+  delay(100);
+}
