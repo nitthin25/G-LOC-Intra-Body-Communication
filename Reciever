@@ -1,1 +1,201 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "driver/pcnt.h"
 
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define OLED_RESET -1
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+const int inputPin = 27;
+const int dummyPin = 32;
+
+#define PUMP_PIN 33
+#define BUZZER_PIN 25
+
+#define FREQ_MIN       100000L
+#define FREQ_MAX       500000L
+#define FREQ_NOISE      90000L
+
+#define GLU_LOW_THRESH   80
+#define GLU_HIGH_THRESH 140
+
+#define PUMP_ON_DURATION 5000
+#define PUMP_COOLDOWN   10000
+
+bool pumpRunning = false;
+unsigned long pumpStartTime = 0;
+unsigned long pumpEndTime = 0;
+
+void setup() {
+  Serial.begin(115200);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("SSD1306 failed");
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("System Ready...");
+  display.display();
+
+  pinMode(dummyPin, OUTPUT);
+  digitalWrite(dummyPin, HIGH);
+
+  pinMode(PUMP_PIN, OUTPUT);
+  digitalWrite(PUMP_PIN, LOW);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  pcnt_config_t pcnt_config = {
+    .pulse_gpio_num = inputPin,
+    .ctrl_gpio_num = dummyPin,
+    .lctrl_mode = PCNT_MODE_KEEP,
+    .hctrl_mode = PCNT_MODE_KEEP,
+    .pos_mode = PCNT_COUNT_INC,
+    .neg_mode = PCNT_COUNT_DIS,
+    .counter_h_lim = 32000,
+    .counter_l_lim = 0,
+    .unit = PCNT_UNIT_0,
+    .channel = PCNT_CHANNEL_0,
+  };
+
+  pcnt_unit_config(&pcnt_config);
+  pcnt_counter_pause(PCNT_UNIT_0);
+  pcnt_counter_clear(PCNT_UNIT_0);
+  pcnt_counter_resume(PCNT_UNIT_0);
+}
+
+void loop() {
+
+  unsigned long now = millis();
+
+  // Frequency Measurement
+  pcnt_counter_clear(PCNT_UNIT_0);
+  pcnt_counter_resume(PCNT_UNIT_0);
+
+  delay(10);
+
+  pcnt_counter_pause(PCNT_UNIT_0);
+
+  int16_t count = 0;
+  pcnt_get_counter_value(PCNT_UNIT_0, &count);
+
+  long currentFreq = (long)count * 100L;
+
+  // Decode Glucose Level
+  int sugarLevel = 0;
+  String status = "NO SIGNAL";
+  bool buzzerOn = false;
+
+  if (currentFreq >= FREQ_NOISE) {
+
+    sugarLevel = map(currentFreq,
+                     FREQ_MIN,
+                     FREQ_MAX,
+                     50,
+                     250);
+
+    sugarLevel = constrain(sugarLevel,
+                           50,
+                           250);
+
+    if (sugarLevel < GLU_LOW_THRESH) {
+      status = "LOW";
+    }
+    else if (sugarLevel < GLU_HIGH_THRESH) {
+      status = "NORMAL";
+    }
+    else {
+      status = "HIGH";
+      buzzerOn = true;
+    }
+  }
+
+  // Pump Logic
+  if (pumpRunning &&
+      (now - pumpStartTime >= PUMP_ON_DURATION)) {
+
+    digitalWrite(PUMP_PIN, LOW);
+
+    pumpRunning = false;
+    pumpEndTime = now;
+
+    Serial.println("Pump OFF - Dose Complete");
+  }
+
+  bool highCondition =
+      (status == "HIGH");
+
+  bool cooldownOver =
+      (now - pumpEndTime >= PUMP_COOLDOWN);
+
+  if (highCondition &&
+      !pumpRunning &&
+      cooldownOver) {
+
+    digitalWrite(PUMP_PIN, HIGH);
+
+    pumpRunning = true;
+    pumpStartTime = now;
+
+    Serial.print("Pump ON - GLU: ");
+    Serial.println(sugarLevel);
+  }
+
+  if (!highCondition &&
+      pumpRunning) {
+
+    digitalWrite(PUMP_PIN, LOW);
+
+    pumpRunning = false;
+    pumpEndTime = now;
+
+    Serial.println("Pump OFF - Sugar Normal");
+  }
+
+  // Buzzer
+  digitalWrite(BUZZER_PIN,
+               buzzerOn ? HIGH : LOW);
+
+  // Serial Monitor
+  Serial.print("Freq: ");
+  Serial.print(currentFreq);
+
+  Serial.print(" Hz | GLU: ");
+  Serial.print(sugarLevel);
+
+  Serial.print(" | Status: ");
+  Serial.print(status);
+
+  Serial.print(" | Pump: ");
+  Serial.println(pumpRunning ? "ON" : "OFF");
+
+  // OLED Display
+  display.clearDisplay();
+
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.print("GLU:");
+  display.print(sugarLevel);
+
+  display.setTextSize(1);
+
+  display.setCursor(0, 20);
+  display.print("Status:");
+  display.print(status);
+
+  display.setCursor(0, 28);
+  display.print("Pump:");
+  display.print(pumpRunning ? "ON" : "OFF");
+
+  display.display();
+
+  delay(500);
+}
